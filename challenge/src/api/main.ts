@@ -10,9 +10,9 @@ import { loadWorkflowDefinition } from "../workflow/index.js";
 import { ClaimsApiModule } from "./claims-api.module.js";
 import { configureClaimsApi } from "./configure-app.js";
 
-const definition = await loadWorkflowDefinition(
-  resolve("challenge/config/claims-workflow.json"),
-);
+const workflowConfigPath = process.env.WORKFLOW_CONFIG_PATH ??
+  "challenge/config/claims-workflow.json";
+const definition = await loadWorkflowDefinition(resolve(workflowConfigPath));
 const pool = new Pool({ connectionString: runtimeDatabaseUrl(), max: 10 });
 await pool.query("SELECT 1");
 

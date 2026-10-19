@@ -36,3 +36,4 @@ Thumbs.db
 
 # Local browser-test artifacts (curated screenshots remain tracked in evidence/)
 challenge/evidence/playwright-artifacts/
+challenge/evidence/playwright-extension-artifacts/

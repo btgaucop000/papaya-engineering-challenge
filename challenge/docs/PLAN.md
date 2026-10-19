@@ -2,7 +2,7 @@
 
 ## Current status
 
-As of 2026-10-20, the validated workflow configuration, pure TypeScript workflow engine, PostgreSQL persistence, NestJS HTTP API, and React UI increments are implemented. The config-only extension demonstration and final delivery pipeline have not been implemented.
+As of 2026-10-20, all planned Challenge 14 increments are implemented and verified: the validated workflow configuration, pure TypeScript engine, PostgreSQL persistence, NestJS HTTP API, React UI, five required scenarios, and config-only extension demonstration. Final evidence maps every evaluation criterion to an executed check.
 
 The implemented slices have been verified with the following commands:
 
@@ -14,8 +14,11 @@ The implemented slices have been verified with the following commands:
 - `npm run typecheck`: passed.
 - `npm run build`: passed for the NestJS API and production React bundle.
 - `npm run test:ui:e2e`: one Playwright flow passed against the real API and PostgreSQL test database, covering a blocked transition, a successful transition, refreshed audit data, and desktop/mobile evidence capture.
+- `npm run verify:scenarios`: all five required scenarios passed on separate claims in PostgreSQL with asserted state, counters, audit histories, exact errors, and non-mutation on failure.
+- `npm run verify:extension:config`: the independent extension config validated with exactly one added state and two added transitions using registered capabilities.
+- `npm run test:extension:e2e`: one Playwright flow passed against the extension config, proving API metadata plus generic UI rendering and execution into and out of `MANUAL_REVIEW`.
 
-The API suite covers the valid approval/payment path, rejection closure, invalid input, wrong roles, precondition failure, non-mutating preview, request-sequence binding, and after-commit warnings. Dedicated evidence for all five named end-to-end scenarios and the config-extension demonstration remains pending.
+The API suite covers the valid approval/payment path, rejection closure, invalid input, wrong roles, precondition failure, non-mutating preview, request-sequence binding, and after-commit warnings. Scenario, audit, config-diff, API metadata, UI, environment, exit-code, and Git-state evidence is complete under `challenge/evidence`.
 
 ## Implementation progress
 
@@ -61,10 +64,12 @@ The API suite covers the valid approval/payment path, rejection closure, invalid
 - Added API label metadata because the prior contract exposed only identifiers; integration assertions cover claim, transition-preview, and audit labels.
 - Added a guarded Playwright fixture using only `claims_workflow_test`, plus a real browser flow and desktop/mobile screenshots.
 
-### Remaining increments
+### Completed final-verification increment
 
-- Required end-to-end scenarios and config-only extension demonstration.
-- Final setup, scenario, audit, and extension evidence in the challenge README.
+- Added a guarded PostgreSQL runner for all five required scenarios, with one claim per scenario and assertions rather than output-only checks.
+- Added a separate `MANUAL_REVIEW` workflow configuration and exact JSON-only diff; the original config is unchanged.
+- Added environment-based config selection solely as demo support plus an isolated Playwright fixture proving API metadata and generic UI behavior.
+- Completed setup, scenario, audit, extension, criterion, environment, exit-code, and Git-state evidence in the challenge README and evidence index.
 
 ## Purpose and labels
 

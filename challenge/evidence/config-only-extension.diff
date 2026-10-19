@@ -1,0 +1,59 @@
+diff --git a/challenge/config/claims-workflow.json b/challenge/config/claims-workflow.manual-review.json
+index 3302941..1d4621a 100644
+--- a/challenge/config/claims-workflow.json
++++ b/challenge/config/claims-workflow.manual-review.json
+@@ -16,6 +16,7 @@
+     { "id": "DOCUMENTS_VERIFIED", "label": "Documents Verified" },
+     { "id": "UNDER_ASSESSMENT", "label": "Under Assessment" },
+     { "id": "PENDING_INFO", "label": "Pending Information" },
++    { "id": "MANUAL_REVIEW", "label": "Manual Review" },
+     { "id": "APPROVED", "label": "Approved" },
+     { "id": "REJECTED", "label": "Rejected" },
+     { "id": "PAYMENT_INITIATED", "label": "Payment Initiated" },
+@@ -178,6 +179,46 @@
+         }
+       ]
+     },
++    {
++      "id": "send_to_manual_review",
++      "label": "Send to Manual Review",
++      "from": "UNDER_ASSESSMENT",
++      "to": "MANUAL_REVIEW",
++      "roles": ["team_lead"],
++      "precondition": {
++        "fact": "assessment.reportComplete",
++        "operator": "eq",
++        "value": true,
++        "description": "The assessment report must be complete"
++      },
++      "effects": [
++        {
++          "type": "notify_member",
++          "phase": "afterCommit",
++          "args": { "template": "manual_review_started" }
++        }
++      ]
++    },
++    {
++      "id": "return_to_assessment",
++      "label": "Return to Assessment",
++      "from": "MANUAL_REVIEW",
++      "to": "UNDER_ASSESSMENT",
++      "roles": ["team_lead"],
++      "precondition": {
++        "fact": "assessment.reportComplete",
++        "operator": "eq",
++        "value": true,
++        "description": "The assessment report must be complete"
++      },
++      "effects": [
++        {
++          "type": "notify_assessor_team",
++          "phase": "afterCommit",
++          "args": { "template": "manual_review_completed" }
++        }
++      ]
++    },
+     {
+       "id": "initiate_payment",
+       "label": "Initiate Payment",

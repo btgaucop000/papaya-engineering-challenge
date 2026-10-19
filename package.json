@@ -17,9 +17,12 @@
     "test:unit": "npm run build:api && node --test dist/challenge/test/config-loader.test.js dist/challenge/test/workflow-engine.test.js",
     "test:integration": "npm run db:test:setup && node --test --test-concurrency=1 dist/challenge/test/persistence.integration.test.js dist/challenge/test/api.integration.test.js",
     "test:api": "npm run db:test:setup && node --test dist/challenge/test/api.integration.test.js",
+    "verify:scenarios": "npm run db:test:setup && node dist/challenge/src/verification/run-required-scenarios.js",
+    "verify:extension:config": "npm run build:api && node dist/challenge/src/verification/verify-config-extension.js",
     "db:migrate": "npm run build:api && node dist/challenge/src/persistence/migrate.js",
     "db:test:setup": "npm run build:api && node dist/challenge/src/persistence/create-test-database.js && node dist/challenge/src/persistence/migrate.js --test",
     "test:ui:e2e": "playwright test",
+    "test:extension:e2e": "playwright test --config=playwright.extension.config.ts",
     "typecheck": "npm run typecheck:api && npm run typecheck:ui",
     "typecheck:api": "tsc -p tsconfig.json --noEmit",
     "typecheck:ui": "tsc -p challenge/frontend/tsconfig.json --noEmit"
