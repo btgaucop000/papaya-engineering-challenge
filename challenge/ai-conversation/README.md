@@ -23,3 +23,6 @@ _No sessions recorded yet._
 - [2026-10-19 — Session 04: Workflow persistence](2026-10-19-04-codex.md)
   - Source: Codex conversation transcript.
   - Status: Transcript saved.
+- [2026-10-19 — Session 05: Claims API](2026-10-19-05-codex.md)
+  - Source: Codex conversation transcript.
+  - Status: Transcript saved.

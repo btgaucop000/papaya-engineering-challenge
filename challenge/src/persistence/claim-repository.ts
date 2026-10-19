@@ -7,6 +7,12 @@ import type {
   PaymentRequestRecord,
   RequiredDocument,
 } from "./types.js";
+import {
+  AssignedAssessorMismatchError,
+  ClaimNotFoundError,
+  InvalidPrerequisiteStateError,
+  PaymentRequestNotReadyError,
+} from "./errors.js";
 
 type DatabaseExecutor = Pool | PoolClient;
 
@@ -114,6 +120,13 @@ export class ClaimRepository {
     return result.rows[0] === undefined ? null : mapClaim(result.rows[0]);
   }
 
+  async list(): Promise<readonly ClaimRecord[]> {
+    const result = await this.database.query<ClaimRow>(
+      `SELECT ${claimColumns} FROM claims ORDER BY created_at, id`,
+    );
+    return result.rows.map(mapClaim);
+  }
+
   async lockById(claimId: string): Promise<ClaimRecord | null> {
     const result = await this.database.query<ClaimRow>(
       `SELECT ${claimColumns} FROM claims WHERE id = $1 FOR UPDATE`,
@@ -187,27 +200,42 @@ export class ClaimPrerequisiteService {
     claimId: string,
     documents: readonly RequiredDocument[],
   ): Promise<void> {
-    await this.expectOne(
-      "UPDATE claims SET required_documents = $2::jsonb, updated_at = clock_timestamp() WHERE id = $1",
-      [claimId, JSON.stringify(documents)],
-    );
+    await this.withLockedClaim(claimId, "set_required_documents", ["SUBMITTED"], async (client) => {
+      await client.query(
+        "UPDATE claims SET required_documents = $2::jsonb, updated_at = clock_timestamp() WHERE id = $1",
+        [claimId, JSON.stringify(documents)],
+      );
+    });
   }
 
   async assignAssessor(claimId: string, assessorId: string): Promise<void> {
-    await this.expectOne(
-      "UPDATE claims SET assessor_id = $2, updated_at = clock_timestamp() WHERE id = $1",
-      [claimId, assessorId],
-    );
+    await this.withLockedClaim(claimId, "assign_assessor", ["DOCUMENTS_VERIFIED"], async (client) => {
+      await client.query(
+        "UPDATE claims SET assessor_id = $2, updated_at = clock_timestamp() WHERE id = $1",
+        [claimId, assessorId],
+      );
+    });
   }
 
   async completeAssessment(
     claimId: string,
     report: Readonly<Record<string, unknown>>,
+    assessorId?: string,
   ): Promise<void> {
-    await this.expectOne(
-      `UPDATE claims SET assessment_report = $2::jsonb,
-         assessment_report_complete = true, updated_at = clock_timestamp() WHERE id = $1`,
-      [claimId, JSON.stringify(report)],
+    await this.withLockedClaim(
+      claimId,
+      "complete_assessment",
+      ["UNDER_ASSESSMENT"],
+      async (client, claim) => {
+        if (assessorId !== undefined && claim.assessorId !== assessorId) {
+          throw new AssignedAssessorMismatchError(claim.assessorId, assessorId);
+        }
+        await client.query(
+          `UPDATE claims SET assessment_report = $2::jsonb,
+             assessment_report_complete = true, updated_at = clock_timestamp() WHERE id = $1`,
+          [claimId, JSON.stringify(report)],
+        );
+      },
     );
   }
 
@@ -216,57 +244,77 @@ export class ClaimPrerequisiteService {
     isValid: boolean,
     metadata: Readonly<Record<string, unknown>>,
   ): Promise<number> {
+    return this.withLockedClaim(
+      claimId,
+      "record_additional_information",
+      ["PENDING_INFO"],
+      async (client, claim) => {
+        if (claim.informationRequestCount < 1) {
+          throw new InvalidPrerequisiteStateError(
+            "record_additional_information",
+            claim.state,
+            ["PENDING_INFO with an active request"],
+          );
+        }
+        await client.query(
+          `INSERT INTO additional_information
+             (claim_id, request_sequence, is_valid, metadata)
+           VALUES ($1, $2, $3, $4::jsonb)`,
+          [claimId, claim.informationRequestCount, isValid, JSON.stringify(metadata)],
+        );
+        return claim.informationRequestCount;
+      },
+    );
+  }
+
+  async confirmPayment(claimId: string, paymentReference: string): Promise<void> {
+    await this.withLockedClaim(claimId, "confirm_payment", ["PAYMENT_INITIATED"], async (client) => {
+      const result = await client.query(
+        `UPDATE payment_requests SET confirmed = true, payment_reference = $2,
+           confirmed_at = clock_timestamp()
+         WHERE claim_id = $1 AND status = 'INITIATED'`,
+        [claimId, paymentReference],
+      );
+      if (result.rowCount !== 1) {
+        throw new PaymentRequestNotReadyError(claimId);
+      }
+    });
+  }
+
+  async acknowledgeRejection(claimId: string): Promise<void> {
+    await this.withLockedClaim(claimId, "acknowledge_rejection", ["REJECTED"], async (client) => {
+      await client.query(
+        `UPDATE claims SET member_acknowledged_rejection = true,
+           updated_at = clock_timestamp() WHERE id = $1`,
+        [claimId],
+      );
+    });
+  }
+
+  private async withLockedClaim<T>(
+    claimId: string,
+    operation: string,
+    allowedStates: readonly string[],
+    action: (client: PoolClient, claim: ClaimRecord) => Promise<T>,
+  ): Promise<T> {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      const repository = new ClaimRepository(client);
-      const claim = await repository.lockById(claimId);
+      const claim = await new ClaimRepository(client).lockById(claimId);
       if (claim === null) {
-        throw new Error(`Claim not found: ${claimId}`);
+        throw new ClaimNotFoundError(claimId);
       }
-      if (claim.state !== "PENDING_INFO" || claim.informationRequestCount < 1) {
-        throw new Error("Additional information can only be recorded for the active request");
+      if (!allowedStates.includes(claim.state)) {
+        throw new InvalidPrerequisiteStateError(operation, claim.state, allowedStates);
       }
-      await client.query(
-        `INSERT INTO additional_information
-           (claim_id, request_sequence, is_valid, metadata)
-         VALUES ($1, $2, $3, $4::jsonb)`,
-        [claimId, claim.informationRequestCount, isValid, JSON.stringify(metadata)],
-      );
+      const result = await action(client, claim);
       await client.query("COMMIT");
-      return claim.informationRequestCount;
+      return result;
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
     } finally {
       client.release();
-    }
-  }
-
-  async confirmPayment(claimId: string, paymentReference: string): Promise<void> {
-    const result = await this.pool.query(
-      `UPDATE payment_requests SET confirmed = true, payment_reference = $2,
-         confirmed_at = clock_timestamp()
-       WHERE claim_id = $1 AND status = 'INITIATED'`,
-      [claimId, paymentReference],
-    );
-    if (result.rowCount !== 1) {
-      throw new Error(`Initiated payment request not found for claim: ${claimId}`);
-    }
-  }
-
-  async acknowledgeRejection(claimId: string): Promise<void> {
-    await this.expectOne(
-      `UPDATE claims SET member_acknowledged_rejection = true,
-         updated_at = clock_timestamp() WHERE id = $1`,
-      [claimId],
-    );
-  }
-
-  private async expectOne(sql: string, values: unknown[]): Promise<void> {
-    const result = await this.pool.query(sql, values);
-    if (result.rowCount !== 1) {
-      throw new Error(`Claim not found: ${String(values[0])}`);
     }
   }
 }

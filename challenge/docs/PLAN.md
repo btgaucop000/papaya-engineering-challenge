@@ -2,17 +2,18 @@
 
 ## Current status
 
-As of 2026-10-19, the validated workflow configuration, pure TypeScript workflow engine, and PostgreSQL persistence increments are implemented. The HTTP API, React UI, and delivery pipeline have not been implemented.
+As of 2026-10-19, the validated workflow configuration, pure TypeScript workflow engine, PostgreSQL persistence, and NestJS HTTP API increments are implemented. The React UI, config-only extension demonstration, and final delivery pipeline have not been implemented.
 
 The implemented slices have been verified with the following commands:
 
 - `docker compose up -d postgres`: started a real local PostgreSQL 16 container.
 - `npm run db:migrate`: applied the migrations to the development database.
 - `npm run test:unit`: 29 unit tests passed, 0 failed.
-- `npm run test:integration`: created/migrated the dedicated `claims_workflow_test` database; 8 PostgreSQL integration tests passed, 0 failed.
+- `npm run test:api`: created/migrated the dedicated `claims_workflow_test` database; 11 NestJS API/PostgreSQL integration tests passed, 0 failed.
+- `npm run test:integration`: created/migrated the dedicated `claims_workflow_test` database; 20 PostgreSQL integration tests passed, 0 failed across the API and persistence suites.
 - `npm run typecheck`: passed.
 
-The five end-to-end scenarios and all API, UI, and config-extension checks remain pending because those increments are outside the current persistence slice.
+The API suite covers the valid approval/payment path, rejection closure, invalid input, wrong roles, precondition failure, non-mutating preview, request-sequence binding, and after-commit warnings. Dedicated evidence for all five named end-to-end scenarios, UI checks, and the config-extension demonstration remains pending.
 
 ## Implementation progress
 
@@ -36,9 +37,21 @@ The five end-to-end scenarios and all API, UI, and config-extension checks remai
 - Added real PostgreSQL integration coverage for successful persistence, rejected-transition isolation, audit/effect rollback, audit immutability, row-lock concurrency, payment-effect scoping, and request-sequence-bound prerequisite data.
 - Added a cleanup guard that refuses integration-test cleanup unless `current_database()` ends in `_test`.
 
+### Completed in the claims API slice
+
+- Added NestJS controllers and strict allowlisted DTO validation for claim queries, transition preview/execution, audit history, and the accepted prerequisite operations.
+- Added four server-defined demo users. The API maps `x-demo-user-id` to exactly one role and rejects client-supplied role or protected persistence fields.
+- Reused the existing workflow engine and transactional `ClaimApplicationService`; transition paths and business conditions were not duplicated in controllers.
+- Added non-mutating outgoing-transition preview with required roles, authorization, availability, and specific unmet conditions.
+- Added row-locked state guards for document updates, assessor assignment, report completion, active-sequence additional information, mock payment confirmation, and member acknowledgement.
+- Added a fixed `demo-system/system` operation that exposes no client-selectable system role or transition.
+- Added specific HTTP mappings for validation, identity, authorization, not-found, state conflict, transition conflict, precondition, and cycle errors.
+- Connected after-commit mock payloads and preserved successful transition responses with `effectWarnings` when a mock fails.
+- Added an idempotent insert-only demo seed with database-name, `_test` suffix, and remote-host safety checks. No broad reset operation was added.
+- Added eleven API integration tests against PostgreSQL and forced combined database suites to run sequentially to prevent cleanup interference.
+
 ### Remaining increments
 
-- NestJS API and server-controlled demo identities around the implemented application service and prerequisite operations.
 - React UI and all UI verification.
 - Required end-to-end scenarios and config-only extension demonstration.
 - Final setup, scenario, audit, and extension evidence in the challenge README.

@@ -1,4 +1,4 @@
-import type { Actor, CounterUpdate } from "../workflow/index.js";
+import type { Actor, ConditionFailure, CounterUpdate } from "../workflow/index.js";
 
 export type RequiredDocument = {
   readonly type: string;
@@ -82,4 +82,14 @@ export type PersistedTransition = {
   readonly auditSequence: number;
   readonly counterUpdates: readonly CounterUpdate[];
   readonly effectWarnings: readonly EffectWarning[];
+};
+
+export type TransitionPreview = {
+  readonly transitionId: string;
+  readonly fromState: string;
+  readonly toState: string;
+  readonly requiredRoles: readonly string[];
+  readonly authorized: boolean;
+  readonly available: boolean;
+  readonly unmetConditions: readonly ConditionFailure[];
 };
