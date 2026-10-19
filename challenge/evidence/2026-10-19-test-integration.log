@@ -1,0 +1,94 @@
+﻿Evidence: PostgreSQL integration tests
+Started at: 2026-10-19T22:08:49.381+07:00
+Command: npm run test:integration
+HEAD: 7022161e2decd95410c42346832f9dd72fbcdc6c
+Working tree: DIRTY - uncommitted changes present
+Git status before run:
+ M README.md
+ M challenge/README.md
+ M challenge/config/claims-workflow.json
+ M challenge/docs/PLAN.md
+ M challenge/src/workflow/registries.ts
+ M package-lock.json
+ M package.json
+?? .env.example
+?? challenge/db/
+?? challenge/src/persistence/
+?? challenge/test/persistence.integration.test.ts
+?? docker-compose.yml
+
+--- command output (stdout and stderr, merged) ---
+
+> papaya-claims-workflow-orchestrator@0.1.0 test:integration
+> npm run db:test:setup && node --test dist/challenge/test/persistence.integration.test.js
+
+
+> papaya-claims-workflow-orchestrator@0.1.0 db:test:setup
+> npm run build && node dist/challenge/src/persistence/create-test-database.js && node dist/challenge/src/persistence/migrate.js --test
+
+
+> papaya-claims-workflow-orchestrator@0.1.0 build
+> tsc -p tsconfig.json
+
+Test database ready: claims_workflow_test
+Migrations applied to test database.
+TAP version 13
+# Subtest: PostgreSQL workflow persistence
+    # Subtest: persists an accepted transition and its ordered audit record atomically
+    ok 1 - persists an accepted transition and its ordered audit record atomically
+      ---
+      duration_ms: 71.5059
+      ...
+    # Subtest: a rejected transition does not modify claim, counter, audit, or payment data
+    ok 2 - a rejected transition does not modify claim, counter, audit, or payment data
+      ---
+      duration_ms: 57.9951
+      ...
+    # Subtest: an audit insert error rolls back the state and audit sequence
+    ok 3 - an audit insert error rolls back the state and audit sequence
+      ---
+      duration_ms: 55.9994
+      ...
+    # Subtest: a transactional payment effect error rolls back state and audit
+    ok 4 - a transactional payment effect error rolls back state and audit
+      ---
+      duration_ms: 63.2799
+      ...
+    # Subtest: the runtime database role cannot update or delete audit rows
+    ok 5 - the runtime database role cannot update or delete audit rows
+      ---
+      duration_ms: 87.3293
+      ...
+    # Subtest: concurrent transitions serialize on the claim and re-evaluate fresh state
+    ok 6 - concurrent transitions serialize on the claim and re-evaluate fresh state
+      ---
+      duration_ms: 175.0797
+      ...
+    # Subtest: only the configured approval effect creates a payment request
+    ok 7 - only the configured approval effect creates a payment request
+      ---
+      duration_ms: 71.5176
+      ...
+    # Subtest: prerequisite information is bound to the active request sequence
+    ok 8 - prerequisite information is bound to the active request sequence
+      ---
+      duration_ms: 69.9764
+      ...
+    1..8
+ok 1 - PostgreSQL workflow persistence
+  ---
+  duration_ms: 685.5632
+  type: 'suite'
+  ...
+1..1
+# tests 8
+# suites 1
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 789.217
+--- end command output ---
+Finished at: 2026-10-19T22:08:52.122+07:00
+Exit code: 0

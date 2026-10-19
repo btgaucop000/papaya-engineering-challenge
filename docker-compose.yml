@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_OWNER_USER:-claims_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-claims_owner}
+      POSTGRES_DB: ${POSTGRES_DB:-claims_workflow}
+    ports:
+      - "${POSTGRES_PORT:-54329}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - claims-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  claims-postgres-data:
