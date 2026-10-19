@@ -38,6 +38,8 @@ export const defaultRegistries: WorkflowRegistries = {
   effects: {
     start_assessment_timer: "transactional",
     reset_assessment_timer: "transactional",
+    record_information_request: "transactional",
+    record_rejection: "transactional",
     create_payment_request: "transactional",
     mark_payment_initiated: "transactional",
     archive_claim: "transactional",

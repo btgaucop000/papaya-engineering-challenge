@@ -2,14 +2,17 @@
 
 ## Current status
 
-As of 2026-10-19, the validated workflow configuration and pure TypeScript workflow-engine increments are implemented. The database, API, React UI, effect handlers, and delivery pipeline have not been implemented.
+As of 2026-10-19, the validated workflow configuration, pure TypeScript workflow engine, and PostgreSQL persistence increments are implemented. The HTTP API, React UI, and delivery pipeline have not been implemented.
 
-The implemented slice has been verified with the following commands:
+The implemented slices have been verified with the following commands:
 
-- `npm test`: 29 unit tests passed, 0 failed.
+- `docker compose up -d postgres`: started a real local PostgreSQL 16 container.
+- `npm run db:migrate`: applied the migrations to the development database.
+- `npm run test:unit`: 29 unit tests passed, 0 failed.
+- `npm run test:integration`: created/migrated the dedicated `claims_workflow_test` database; 8 PostgreSQL integration tests passed, 0 failed.
 - `npm run typecheck`: passed.
 
-The five end-to-end scenarios and all persistence, transaction, audit, concurrency, API, UI, and config-extension checks remain pending because their implementation increments are not part of the current slice.
+The five end-to-end scenarios and all API, UI, and config-extension checks remain pending because those increments are outside the current persistence slice.
 
 ## Implementation progress
 
@@ -23,12 +26,21 @@ The five end-to-end scenarios and all persistence, transaction, audit, concurren
 - Kept the engine free of database, HTTP, framework, and effect-execution dependencies.
 - Added unit coverage for amount below/equal to/above the policy limit, missing facts in `all` and `any`, the fourth information request, config validation, effect planning, and input immutability.
 
+### Completed in the persistence slice
+
+- Added PostgreSQL 16 local infrastructure through Docker Compose, `.env.example`, an idempotent migration runner, and a separate test-database setup command.
+- Added claim, prerequisite, request-bound additional-information, mock-payment-request, and ordered audit persistence using `pg`.
+- Added an application service that begins a transaction, locks the claim row, reloads database facts, calls the pure engine, and commits state, counters, audit, and configured transactional effects together.
+- Added transactional and after-commit effect registries. Persistence contains no transition route table or state-path switch; configured effect descriptors select the handlers.
+- Added a restricted runtime database role plus a trigger that rejects audit `UPDATE` and `DELETE`, including attempts made through the migration owner.
+- Added real PostgreSQL integration coverage for successful persistence, rejected-transition isolation, audit/effect rollback, audit immutability, row-lock concurrency, payment-effect scoping, and request-sequence-bound prerequisite data.
+- Added a cleanup guard that refuses integration-test cleanup unless `current_database()` ends in `_test`.
+
 ### Remaining increments
 
-- PostgreSQL schema, repositories, locking, atomic persistence, and audit immutability.
-- NestJS API, server-controlled demo identities, prerequisite operations, and effect handlers.
+- NestJS API and server-controlled demo identities around the implemented application service and prerequisite operations.
 - React UI and all UI verification.
-- Required end-to-end scenarios, transaction/concurrency tests, database permission checks, and config-only extension demonstration.
+- Required end-to-end scenarios and config-only extension demonstration.
 - Final setup, scenario, audit, and extension evidence in the challenge README.
 
 ## Purpose and labels
