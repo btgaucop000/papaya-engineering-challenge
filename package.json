@@ -1,0 +1,15 @@
+{
+  "name": "papaya-claims-workflow-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/challenge/test/config-loader.test.js dist/challenge/test/workflow-engine.test.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.1",
+    "typescript": "^5.6.3"
+  }
+}

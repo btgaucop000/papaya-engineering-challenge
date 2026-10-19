@@ -30,3 +30,10 @@
 
 - Preserve existing content and user changes. Report conflicts instead of overwriting them.
 - Do not commit or push unless the repository owner explicitly requests it.
+
+## Challenge references
+
+- Original brief: `challenge/docs/REQUIREMENTS.md`
+- Design decisions: `challenge/docs/DECISIONS.md`
+
+Read these files before implementing or reviewing the challenge.
