@@ -1,11 +1,13 @@
 import type { Pool, PoolClient } from "pg";
 
 import type {
+  Actor,
   FactContext,
   TransitionPlan,
   WorkflowDefinition,
   WorkflowEngine,
 } from "../workflow/index.js";
+import { evaluateCondition, readFact } from "../workflow/index.js";
 import { ClaimRepository } from "./claim-repository.js";
 import {
   AfterCommitEffectRegistry,
@@ -16,7 +18,9 @@ import type {
   EffectWarning,
   PersistedTransition,
   TransitionCommand,
+  TransitionPreview,
 } from "./types.js";
+import { ClaimNotFoundError } from "./errors.js";
 
 export type TransitionServiceHooks = {
   readonly afterClaimLocked?: (client: PoolClient, claim: ClaimRecord) => Promise<void>;
@@ -53,6 +57,7 @@ export class ClaimApplicationService {
     let claim: ClaimRecord;
     let occurredAt: Date;
     let auditSequence: number;
+    let facts: FactContext;
 
     try {
       await client.query("BEGIN");
@@ -60,12 +65,12 @@ export class ClaimApplicationService {
 
       const lockedClaim = await repository.lockById(command.claimId);
       if (lockedClaim === null) {
-        throw new Error(`Claim not found: ${command.claimId}`);
+        throw new ClaimNotFoundError(command.claimId);
       }
       claim = lockedClaim;
       await this.hooks.afterClaimLocked?.(client, claim);
 
-      const facts = await this.buildFacts(repository, claim, command);
+      facts = await this.buildFacts(repository, claim, command);
       plan = this.engine.planTransition({
         currentState: claim.state,
         transitionId: command.transitionId,
@@ -107,6 +112,7 @@ export class ClaimApplicationService {
           client,
           claim,
           command,
+          facts,
           counterUpdates: plan.counterUpdates,
           now: occurredAt,
           settings: this.definition.settings,
@@ -127,6 +133,7 @@ export class ClaimApplicationService {
         await this.afterCommitEffects.execute(effect, {
           claim,
           command,
+          facts,
           counterUpdates: plan.counterUpdates,
           now: occurredAt,
           settings: this.definition.settings,
@@ -148,6 +155,56 @@ export class ClaimApplicationService {
       counterUpdates: plan.counterUpdates,
       effectWarnings,
     };
+  }
+
+  async previewTransitions(claimId: string, actor: Actor): Promise<readonly TransitionPreview[]> {
+    const repository = new ClaimRepository(this.pool);
+    const claim = await repository.findById(claimId);
+    if (claim === null) {
+      throw new ClaimNotFoundError(claimId);
+    }
+
+    const facts = await this.buildFacts(repository, claim, {
+      claimId,
+      transitionId: "preview",
+      actor,
+    });
+
+    return this.engine.listTransitions(claim.state).map((transition) => {
+      const evaluation = evaluateCondition(transition.precondition, facts);
+      const unmetConditions = [...evaluation.failures];
+
+      for (const limit of this.definition.cycleLimits) {
+        if (limit.transitionId !== transition.id) {
+          continue;
+        }
+        const count = readFact(facts, limit.counterFact);
+        if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
+          unmetConditions.push({
+            code: "FACT_MISSING",
+            fact: limit.counterFact,
+            message: `Fact "${limit.counterFact}" must be a non-negative integer`,
+          });
+        } else if (count >= limit.max) {
+          unmetConditions.push({
+            code: "CONDITION_NOT_MET",
+            fact: limit.counterFact,
+            message: limit.errorMessage,
+          });
+        }
+      }
+
+      const authorized = transition.roles.includes(actor.role);
+      return {
+        transitionId: transition.id,
+        fromState: transition.from,
+        toState: transition.to,
+        requiredRoles: transition.roles,
+        authorized,
+        available: authorized && unmetConditions.length === 0,
+        unmetConditions,
+      };
+    });
   }
 
   private async buildFacts(

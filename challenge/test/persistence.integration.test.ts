@@ -392,4 +392,32 @@ describe("PostgreSQL workflow persistence", () => {
       },
     ]);
   });
+
+  test("the rejection mock notification includes its required demo details", async () => {
+    const claimId = await createClaim({
+      state: "UNDER_ASSESSMENT",
+      assessorId: assessor.userId,
+      assessmentReport: { conclusion: "reject" },
+      assessmentReportComplete: true,
+    });
+    const messages: string[] = [];
+
+    await applicationService({
+      afterCommitEffects: new AfterCommitEffectRegistry(
+        createLoggingAfterCommitHandlers((message) => messages.push(message)),
+      ),
+    }).transition({
+      claimId,
+      transitionId: "reject_claim",
+      actor: assessor,
+      rejectionReason: "The service is excluded from coverage",
+    });
+
+    assert.equal(messages.length, 1);
+    const notification = JSON.parse(messages[0]!) as {
+      details: { rejectionReason: string; appealInstructions: string };
+    };
+    assert.equal(notification.details.rejectionReason, "The service is excluded from coverage");
+    assert.match(notification.details.appealInstructions, /appeal period/i);
+  });
 });

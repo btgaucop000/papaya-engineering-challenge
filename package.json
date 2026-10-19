@@ -5,19 +5,32 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "start:api": "npm run build && node dist/challenge/src/api/main.js",
+    "demo:seed": "npm run build && node dist/challenge/src/api/seed-demo.js",
     "test": "npm run test:unit",
     "test:unit": "npm run build && node --test dist/challenge/test/config-loader.test.js dist/challenge/test/workflow-engine.test.js",
-    "test:integration": "npm run db:test:setup && node --test dist/challenge/test/persistence.integration.test.js",
+    "test:integration": "npm run db:test:setup && node --test --test-concurrency=1 dist/challenge/test/persistence.integration.test.js dist/challenge/test/api.integration.test.js",
+    "test:api": "npm run db:test:setup && node --test dist/challenge/test/api.integration.test.js",
     "db:migrate": "npm run build && node dist/challenge/src/persistence/migrate.js",
     "db:test:setup": "npm run build && node dist/challenge/src/persistence/create-test-database.js && node dist/challenge/src/persistence/migrate.js --test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@nestjs/testing": "^11.2.7",
     "@types/node": "^20.16.1",
     "@types/pg": "^8.23.1",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.4",
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "pg": "^8.23.1"
+    "@nestjs/common": "^11.2.7",
+    "@nestjs/core": "^11.2.7",
+    "@nestjs/platform-express": "^11.2.7",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   }
 }

@@ -5,14 +5,17 @@ import type { PoolClient } from "pg";
 import type {
   CounterUpdate,
   EffectDescriptor,
+  FactContext,
   WorkflowDefinition,
 } from "../workflow/index.js";
+import { readFact } from "../workflow/index.js";
 import type { ClaimRecord, TransitionCommand } from "./types.js";
 
 export type TransactionalEffectContext = {
   readonly client: PoolClient;
   readonly claim: ClaimRecord;
   readonly command: TransitionCommand;
+  readonly facts: FactContext;
   readonly counterUpdates: readonly CounterUpdate[];
   readonly now: Date;
   readonly settings: WorkflowDefinition["settings"];
@@ -130,12 +133,23 @@ export function createLoggingAfterCommitHandlers(
   log: (message: string) => void = console.log,
 ): Readonly<Record<string, AfterCommitEffectHandler>> {
   const mockHandler: AfterCommitEffectHandler = async (effect, context) => {
+    const template = effect.args.template;
+    const details: Record<string, unknown> = {};
+    if (template === "claim_rejected") {
+      details.rejectionReason = context.command.rejectionReason;
+      details.appealInstructions = "Contact the claims team within the configured appeal period.";
+    } else if (template === "additional_information_requested") {
+      details.missingInfoDescription = context.command.missingInfoDescription;
+    } else if (template === "payment_confirmed") {
+      details.paymentReference = readFact(context.facts, "payment.reference");
+    }
     log(
       JSON.stringify({
         kind: "mock-effect",
         type: effect.type,
         claimId: context.claim.id,
         args: effect.args,
+        details,
       }),
     );
   };
