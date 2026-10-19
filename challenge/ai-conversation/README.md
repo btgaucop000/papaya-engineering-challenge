@@ -29,3 +29,6 @@ _No sessions recorded yet._
 - [2026-10-19 — Session 06: Claims workflow UI](2026-10-19-06-codex.md)
   - Source: Codex conversation transcript.
   - Status: Transcript saved.
+- [2026-10-19 — Session 07: Final verification](2026-10-19-07-codex.md)
+  - Source: Codex conversation transcript.
+  - Status: Transcript saved.

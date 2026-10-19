@@ -1,11 +1,14 @@
 # Advanced Challenge 14 — Claims Workflow Orchestrator
 
-Selected stack: TypeScript, NestJS, React, and PostgreSQL. The current implementation includes the validated workflow engine, PostgreSQL persistence, NestJS claims API, and a responsive React workflow desk. The config-only extension demonstration and final five-scenario evidence remain pending.
+Selected stack: TypeScript, NestJS, React, and PostgreSQL. The implementation includes the validated workflow engine, atomic PostgreSQL persistence, NestJS claims API, responsive React workflow desk, five required scenario runner, and config-only `MANUAL_REVIEW` demonstration.
 
 ## Prerequisites
 
 - Node.js 20+
 - Docker Desktop with Docker Compose
+- Chromium installed through `npx playwright install chromium` for browser checks
+
+Copy `.env.example` to `.env` before running local services. The checked-in example contains local-only development and test URLs; do not reuse those credentials outside this demo.
 
 ## Setup and run the API
 
@@ -164,11 +167,15 @@ npm run test:api
 npm run test:integration
 npm run typecheck
 npm run build
+npm run test:ui:e2e
+npm run verify:scenarios
+npm run verify:extension:config
+npm run test:extension:e2e
 ```
 
 `npm run test:api` and `npm run test:integration` create/migrate `claims_workflow_test`. Cleanup checks `current_database()` and refuses to run outside a database whose name ends with `_test`. The combined integration script runs the database-using files sequentially so their guarded cleanup cannot interfere.
 
-Current verified coverage includes 29 workflow unit tests, 11 API/PostgreSQL tests, and 9 persistence/PostgreSQL tests. See [evidence](evidence/README.md) for the recorded commands and results.
+Current verified coverage includes 29 workflow unit tests, 11 API/PostgreSQL tests, 9 persistence/PostgreSQL tests, one original-workflow Playwright check, and one config-extension Playwright check. This is 51 named automated checks, exceeding the minimum of 15. See [final verification evidence](evidence/2026-10-20-final-verification.md) for the actual commands, exit codes, environment, Git state, and criterion mapping.
 
 The browser flow uses the dedicated `_test` database and refuses to prepare data anywhere else. Install the matching browser once, ensure PostgreSQL is running, then run:
 
@@ -180,14 +187,44 @@ npm run test:ui:e2e
 
 Playwright starts an isolated API on port `3100` and the UI on port `4273`, so it can run while the normal local UI remains open on `4173`. It verifies a blocked document transition, completes a successful document transition, confirms the refreshed audit entry, and captures the checked desktop/mobile evidence.
 
-## Remaining scope
+## Required scenario demo
 
-- Dedicated end-to-end evidence for all five named challenge scenarios.
-- Config-only `MANUAL_REVIEW` extension demonstration.
-- Final scenario/audit/config-diff evidence and submission polish.
+`npm run verify:scenarios` creates/migrates `claims_workflow_test`, verifies the `_test` database boundary, and creates a separate UUID claim for every required scenario. It asserts final state, audit count and ordering, the information-request counter, exact domain errors, and unchanged state/audit/payment/effects for failed transitions. It never reads or changes the development database.
 
-Intentional limitations remain: demo identities only, synchronous mocks, no durable retry/outbox, no general idempotency framework, and no workflow versioning or hot reload.
+The actual run, claim IDs, audit rows, and failure output are recorded in [required scenario evidence](evidence/2026-10-20-required-scenarios.md).
+
+## Config-only extension demo
+
+The original [workflow config](config/claims-workflow.json) remains unchanged. The separate [manual-review config](config/claims-workflow.manual-review.json) adds one state and two transitions using only the registered `assessment.reportComplete` fact, `eq` operator, `team_lead` role, and notification handlers. The exact [JSON-only diff](evidence/config-only-extension.diff) is part of the evidence.
+
+Validate its structure and capability delta:
+
+```powershell
+npm run verify:extension:config
+```
+
+Run the API manually with the extension while keeping the default startup behavior unchanged:
+
+```powershell
+$env:WORKFLOW_CONFIG_PATH = 'challenge/config/claims-workflow.manual-review.json'
+npm run start:api
+```
+
+Run the automated API-metadata and UI proof:
+
+```powershell
+npm run db:test:setup
+npm run test:extension:e2e
+```
+
+The workflow extension itself is JSON only. `WORKFLOW_CONFIG_PATH`, the dedicated verifier, and Playwright fixture are demo-support code. No workflow-engine, database migration/schema, or state-specific React branch was changed; the API and UI consume definition metadata generically. See the UI in [Manual Review](evidence/config-extension-manual-review.png), the [completed round trip and audit](evidence/config-extension-ui.png), and [final verification evidence](evidence/2026-10-20-final-verification.md).
+
+## Approach, decisions, and limitations
+
+The approach keeps transition policy declarative and the engine pure, then performs locked PostgreSQL transitions that atomically persist state, counters, audit, and internal effects. The API resolves fixed demo identities server-side, and the UI renders labels, roles, transitions, and blocked reasons supplied by the API. Accepted trade-offs and rationale are recorded in [DECISIONS.md](docs/DECISIONS.md); implementation status and acceptance mapping are in [PLAN.md](docs/PLAN.md).
+
+Known limitations are intentional: demo identities only, synchronous mocks, no durable retry/outbox, no general idempotency framework, no workflow versioning or hot reload, and no real external payment/notification/document integrations.
 
 ## AI Conversation
 
-Raw conversation records are preserved under [ai-conversation](ai-conversation/README.md).
+Raw conversation records are preserved unchanged under [ai-conversation](ai-conversation/README.md).

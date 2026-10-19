@@ -23,3 +23,14 @@ The React UI was verified on the uncommitted `feat/claims-ui` worktree based on 
 - [2026-10-20-claims-ui.md](2026-10-20-claims-ui.md)
 - [Desktop screenshot](claims-ui-desktop.png)
 - [Mobile screenshot](claims-ui-mobile.png)
+
+## Final Challenge 14 verification
+
+Final verification was run on 2026-10-20 from branch `test/final-verification`, based on synchronized `origin/main` commit `5066dbf`. The initial worktree was clean; no conflict occurred; no commit or push was performed.
+
+- [Evaluation matrix, environment, commands, and exit codes](2026-10-20-final-verification.md)
+- [Five required scenarios and per-claim audit output](2026-10-20-required-scenarios.md)
+- [Config-only extension diff](config-only-extension.diff)
+- [Config-only extension in Manual Review](config-extension-manual-review.png)
+- [Config-only extension UI screenshot](config-extension-ui.png)
+- [Preserved raw AI conversations](../ai-conversation/README.md)
