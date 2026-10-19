@@ -17,3 +17,6 @@ _No sessions recorded yet._
 - [2026-10-19 — Session 01](2026-10-19-01-codex.md)
   - Source: Copied using “Copy as Markdown” from Codex in Cursor.
   - Status: Transcript saved.
+- [2026-10-19 — Session 02: Challenge design analysis](2026-10-19-02-codex.md)
+  - Source: Codex conversation transcript.
+  - Status: Transcript saved.
