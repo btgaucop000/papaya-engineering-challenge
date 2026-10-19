@@ -8,6 +8,7 @@ import {
   ClaimRepository,
 } from "../persistence/index.js";
 import type { RequiredDocument, TransitionCommand } from "../persistence/index.js";
+import type { WorkflowDefinition } from "../workflow/index.js";
 import {
   demoSystemActor,
   demoUsers,
@@ -22,7 +23,11 @@ import type {
   SetDocumentsDto,
   TransitionDto,
 } from "./dto.js";
-import { CLAIM_APPLICATION_SERVICE, DATABASE_POOL } from "./tokens.js";
+import {
+  CLAIM_APPLICATION_SERVICE,
+  DATABASE_POOL,
+  WORKFLOW_DEFINITION,
+} from "./tokens.js";
 
 @Injectable()
 export class ClaimsApiService {
@@ -33,6 +38,8 @@ export class ClaimsApiService {
     @Inject(DATABASE_POOL) pool: Pool,
     @Inject(CLAIM_APPLICATION_SERVICE)
     private readonly application: ClaimApplicationService,
+    @Inject(WORKFLOW_DEFINITION)
+    private readonly definition: WorkflowDefinition,
   ) {
     this.repository = new ClaimRepository(pool);
     this.prerequisites = new ClaimPrerequisiteService(pool);
@@ -47,6 +54,7 @@ export class ClaimsApiService {
     return claims.map((claim) => ({
       id: claim.id,
       state: claim.state,
+      stateLabel: this.stateLabel(claim.state),
       amount: claim.amount,
       policyLimit: claim.policyLimit,
       informationRequestCount: claim.informationRequestCount,
@@ -59,7 +67,7 @@ export class ClaimsApiService {
       throw new ClaimNotFoundError(claimId);
     }
     const paymentRequest = await this.repository.findPaymentRequest(claimId);
-    return { ...claim, paymentRequest };
+    return { ...claim, stateLabel: this.stateLabel(claim.state), paymentRequest };
   }
 
   async previewTransitions(claimId: string, userId: string | undefined) {
@@ -85,7 +93,13 @@ export class ClaimsApiService {
 
   async listAudit(claimId: string) {
     await this.ensureClaimExists(claimId);
-    return this.repository.listAudit(claimId);
+    const audit = await this.repository.listAudit(claimId);
+    return audit.map((entry) => ({
+      ...entry,
+      transitionLabel: this.transitionLabel(entry.transitionId),
+      fromStateLabel: this.stateLabel(entry.fromState),
+      toStateLabel: this.stateLabel(entry.toState),
+    }));
   }
 
   async setDocuments(
@@ -171,5 +185,23 @@ export class ClaimsApiService {
     if ((await this.repository.findById(claimId)) === null) {
       throw new ClaimNotFoundError(claimId);
     }
+  }
+
+  private stateLabel(stateId: string): string {
+    const label = this.definition.states.find((state) => state.id === stateId)?.label;
+    if (label === undefined) {
+      throw new Error(`Workflow state label is missing: ${stateId}`);
+    }
+    return label;
+  }
+
+  private transitionLabel(transitionId: string): string {
+    const label = this.definition.transitions.find(
+      (transition) => transition.id === transitionId,
+    )?.label;
+    if (label === undefined) {
+      throw new Error(`Workflow transition label is missing: ${transitionId}`);
+    }
+    return label;
   }
 }

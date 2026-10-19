@@ -27,6 +27,7 @@ export type Condition =
 
 export type WorkflowTransition = {
   readonly id: string;
+  readonly label: string;
   readonly from: string;
   readonly to: string;
   readonly roles: readonly string[];

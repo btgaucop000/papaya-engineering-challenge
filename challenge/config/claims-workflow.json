@@ -24,6 +24,7 @@
   "transitions": [
     {
       "id": "verify_documents",
+      "label": "Verify Documents",
       "from": "SUBMITTED",
       "to": "DOCUMENTS_VERIFIED",
       "roles": ["document_clerk"],
@@ -43,6 +44,7 @@
     },
     {
       "id": "start_assessment",
+      "label": "Start Assessment",
       "from": "DOCUMENTS_VERIFIED",
       "to": "UNDER_ASSESSMENT",
       "roles": ["team_lead"],
@@ -62,6 +64,7 @@
     },
     {
       "id": "approve_claim",
+      "label": "Approve Claim",
       "from": "UNDER_ASSESSMENT",
       "to": "APPROVED",
       "roles": ["assessor"],
@@ -96,6 +99,7 @@
     },
     {
       "id": "reject_claim",
+      "label": "Reject Claim",
       "from": "UNDER_ASSESSMENT",
       "to": "REJECTED",
       "roles": ["assessor"],
@@ -132,6 +136,7 @@
     },
     {
       "id": "request_more_info",
+      "label": "Request More Information",
       "from": "UNDER_ASSESSMENT",
       "to": "PENDING_INFO",
       "roles": ["assessor"],
@@ -155,6 +160,7 @@
     },
     {
       "id": "receive_additional_info",
+      "label": "Receive Additional Information",
       "from": "PENDING_INFO",
       "to": "DOCUMENTS_VERIFIED",
       "roles": ["document_clerk"],
@@ -174,6 +180,7 @@
     },
     {
       "id": "initiate_payment",
+      "label": "Initiate Payment",
       "from": "APPROVED",
       "to": "PAYMENT_INITIATED",
       "roles": ["finance"],
@@ -198,6 +205,7 @@
     },
     {
       "id": "close_paid_claim",
+      "label": "Close Paid Claim",
       "from": "PAYMENT_INITIATED",
       "to": "CLOSED",
       "roles": ["finance"],
@@ -226,6 +234,7 @@
     },
     {
       "id": "close_rejected_claim",
+      "label": "Close Rejected Claim",
       "from": "REJECTED",
       "to": "CLOSED",
       "roles": ["system"],

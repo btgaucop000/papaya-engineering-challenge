@@ -8,7 +8,11 @@ import {
 import { WorkflowEngine, type WorkflowDefinition } from "../workflow/index.js";
 import { ClaimsApiService } from "./claims-api.service.js";
 import { ClaimsController } from "./claims.controller.js";
-import { CLAIM_APPLICATION_SERVICE, DATABASE_POOL } from "./tokens.js";
+import {
+  CLAIM_APPLICATION_SERVICE,
+  DATABASE_POOL,
+  WORKFLOW_DEFINITION,
+} from "./tokens.js";
 
 export type ClaimsApiModuleOptions = {
   readonly pool: Pool;
@@ -33,6 +37,7 @@ export class ClaimsApiModule {
       providers: [
         { provide: DATABASE_POOL, useValue: options.pool },
         { provide: CLAIM_APPLICATION_SERVICE, useValue: application },
+        { provide: WORKFLOW_DEFINITION, useValue: options.definition },
         ClaimsApiService,
       ],
     };

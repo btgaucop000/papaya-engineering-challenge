@@ -86,8 +86,11 @@ export type PersistedTransition = {
 
 export type TransitionPreview = {
   readonly transitionId: string;
+  readonly transitionLabel: string;
   readonly fromState: string;
+  readonly fromStateLabel: string;
   readonly toState: string;
+  readonly toStateLabel: string;
   readonly requiredRoles: readonly string[];
   readonly authorized: boolean;
   readonly available: boolean;

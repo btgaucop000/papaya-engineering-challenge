@@ -2,7 +2,7 @@
 
 ## Current status
 
-As of 2026-10-19, the validated workflow configuration, pure TypeScript workflow engine, PostgreSQL persistence, and NestJS HTTP API increments are implemented. The React UI, config-only extension demonstration, and final delivery pipeline have not been implemented.
+As of 2026-10-20, the validated workflow configuration, pure TypeScript workflow engine, PostgreSQL persistence, NestJS HTTP API, and React UI increments are implemented. The config-only extension demonstration and final delivery pipeline have not been implemented.
 
 The implemented slices have been verified with the following commands:
 
@@ -12,8 +12,10 @@ The implemented slices have been verified with the following commands:
 - `npm run test:api`: created/migrated the dedicated `claims_workflow_test` database; 11 NestJS API/PostgreSQL integration tests passed, 0 failed.
 - `npm run test:integration`: created/migrated the dedicated `claims_workflow_test` database; 20 PostgreSQL integration tests passed, 0 failed across the API and persistence suites.
 - `npm run typecheck`: passed.
+- `npm run build`: passed for the NestJS API and production React bundle.
+- `npm run test:ui:e2e`: one Playwright flow passed against the real API and PostgreSQL test database, covering a blocked transition, a successful transition, refreshed audit data, and desktop/mobile evidence capture.
 
-The API suite covers the valid approval/payment path, rejection closure, invalid input, wrong roles, precondition failure, non-mutating preview, request-sequence binding, and after-commit warnings. Dedicated evidence for all five named end-to-end scenarios, UI checks, and the config-extension demonstration remains pending.
+The API suite covers the valid approval/payment path, rejection closure, invalid input, wrong roles, precondition failure, non-mutating preview, request-sequence binding, and after-commit warnings. Dedicated evidence for all five named end-to-end scenarios and the config-extension demonstration remains pending.
 
 ## Implementation progress
 
@@ -50,9 +52,17 @@ The API suite covers the valid approval/payment path, rejection closure, invalid
 - Added an idempotent insert-only demo seed with database-name, `_test` suffix, and remote-host safety checks. No broad reset operation was added.
 - Added eleven API integration tests against PostgreSQL and forced combined database suites to run sequentially to prevent cleanup interference.
 
+### Completed in the claims UI slice
+
+- Added a responsive React and TypeScript workflow desk with sample-claim selection, server-defined demo users and roles, claim facts, request-info count, outgoing transitions, blocked reasons, prerequisite forms, and immutable audit timeline.
+- Kept workflow policy on the server: the UI renders config-defined state/transition labels, required roles, authorization, and unmet conditions returned by the API. It exposes no direct state, counter, audit, or policy-limit edits.
+- Added specific API error details, loading/empty/success states, duplicate-submit prevention, and refreshes for claim detail, transitions, audit, and claim summaries after successful mutations.
+- Added distinct fixed member and `demo-system/system` operations. After-commit warnings explicitly state that the transition and audit were already committed.
+- Added API label metadata because the prior contract exposed only identifiers; integration assertions cover claim, transition-preview, and audit labels.
+- Added a guarded Playwright fixture using only `claims_workflow_test`, plus a real browser flow and desktop/mobile screenshots.
+
 ### Remaining increments
 
-- React UI and all UI verification.
 - Required end-to-end scenarios and config-only extension demonstration.
 - Final setup, scenario, audit, and extension evidence in the challenge README.
 

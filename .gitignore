@@ -33,3 +33,6 @@ Thumbs.db
 # Keep selected evidence and AI conversation records eligible for commit.
 !evidence/
 !challenge/ai-conversation/
+
+# Local browser-test artifacts (curated screenshots remain tracked in evidence/)
+challenge/evidence/playwright-artifacts/
