@@ -241,6 +241,7 @@ export function parseWorkflowDefinition(
 
     return {
       id: transitionId,
+      label: stringAt(transition.label, `${path}.label`),
       from,
       to,
       roles: transitionRoles,

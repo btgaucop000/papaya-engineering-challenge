@@ -143,10 +143,12 @@ describe("NestJS claims API with PostgreSQL", () => {
     assert.equal(list.body.length, 1);
     assert.equal(list.body[0].id, claimId);
     assert.equal(list.body[0].state, "SUBMITTED");
+    assert.equal(list.body[0].stateLabel, "Submitted");
 
     const detail = await api().get(`/api/claims/${claimId}`).expect(200);
     assert.equal(detail.body.id, claimId);
     assert.equal(detail.body.policyLimit, 1_000);
+    assert.equal(detail.body.stateLabel, "Submitted");
     assert.equal(detail.body.paymentRequest, null);
   });
 
@@ -207,6 +209,9 @@ describe("NestJS claims API with PostgreSQL", () => {
 
     assert.equal(response.body.length, 1);
     assert.equal(response.body[0].transitionId, "verify_documents");
+    assert.equal(response.body[0].transitionLabel, "Verify Documents");
+    assert.equal(response.body[0].fromStateLabel, "Submitted");
+    assert.equal(response.body[0].toStateLabel, "Documents Verified");
     assert.deepEqual(response.body[0].requiredRoles, ["document_clerk"]);
     assert.equal(response.body[0].authorized, true);
     assert.equal(response.body[0].available, false);
@@ -304,6 +309,9 @@ describe("NestJS claims API with PostgreSQL", () => {
     assert.equal(detail.body.paymentRequest.paymentReference, "PAY-DEMO-001");
 
     const audit = await api().get(`/api/claims/${claimId}/audit`).expect(200);
+    assert.equal(audit.body[0].transitionLabel, "Verify Documents");
+    assert.equal(audit.body[0].fromStateLabel, "Submitted");
+    assert.equal(audit.body[0].toStateLabel, "Documents Verified");
     assert.deepEqual(
       audit.body.map((entry: { sequence: number; transitionId: string }) => [
         entry.sequence,

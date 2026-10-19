@@ -195,10 +195,22 @@ export class ClaimApplicationService {
       }
 
       const authorized = transition.roles.includes(actor.role);
+      const fromStateLabel = this.definition.states.find(
+        (state) => state.id === transition.from,
+      )?.label;
+      const toStateLabel = this.definition.states.find(
+        (state) => state.id === transition.to,
+      )?.label;
+      if (fromStateLabel === undefined || toStateLabel === undefined) {
+        throw new Error(`Workflow state label is missing for transition: ${transition.id}`);
+      }
       return {
         transitionId: transition.id,
+        transitionLabel: transition.label,
         fromState: transition.from,
+        fromStateLabel,
         toState: transition.to,
+        toStateLabel,
         requiredRoles: transition.roles,
         authorized,
         available: authorized && unmetConditions.length === 0,

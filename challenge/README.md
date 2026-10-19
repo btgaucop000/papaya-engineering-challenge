@@ -1,6 +1,6 @@
 # Advanced Challenge 14 — Claims Workflow Orchestrator
 
-Selected stack: TypeScript, NestJS, React, and PostgreSQL. The current implementation includes the validated workflow engine, PostgreSQL persistence, and the NestJS claims API. The React UI, config-only extension demonstration, and final five-scenario evidence are not implemented yet.
+Selected stack: TypeScript, NestJS, React, and PostgreSQL. The current implementation includes the validated workflow engine, PostgreSQL persistence, NestJS claims API, and a responsive React workflow desk. The config-only extension demonstration and final five-scenario evidence remain pending.
 
 ## Prerequisites
 
@@ -30,6 +30,27 @@ To stop PostgreSQL without deleting its volume:
 docker compose stop postgres
 ```
 
+## Run the frontend
+
+Keep the API running in one terminal. In a second terminal, from the repository root:
+
+```powershell
+npm run dev:ui
+```
+
+Open `http://127.0.0.1:4173`. The Vite development server proxies `/api` to the backend at `http://localhost:3000`, so the UI does not require a separate CORS configuration.
+
+For a production frontend build and local preview:
+
+```powershell
+npm run build
+npm run start:api
+# In a second terminal:
+npm run preview:ui
+```
+
+The production frontend build is written to `dist/frontend`. The preview server uses the same `/api` proxy; a deployed static build should place the frontend and API behind the same origin or an equivalent reverse proxy.
+
 ## Demo identity model
 
 Send a known user ID in `x-demo-user-id`. The server maps that ID to one role and never accepts a role from the client.
@@ -49,11 +70,11 @@ The `system` role is not a selectable demo user. `POST /api/claims/:claimId/syst
 |---|---|---|
 | `GET /api/health` | Health response | None |
 | `GET /api/demo-users` | List server-defined demo users | None |
-| `GET /api/claims` | List claims in the demo database | None |
-| `GET /api/claims/:claimId` | Claim details and mock payment request | None |
-| `GET /api/claims/:claimId/transitions` | Outgoing transitions, roles, authorization, and unmet conditions | Demo user header |
+| `GET /api/claims` | List claims with config-defined state labels | None |
+| `GET /api/claims/:claimId` | Claim details, state label, and mock payment request | None |
+| `GET /api/claims/:claimId/transitions` | Outgoing transition/state labels, roles, authorization, and unmet conditions | Demo user header |
 | `POST /api/claims/:claimId/transitions` | Execute a transition | Demo user header |
-| `GET /api/claims/:claimId/audit` | Ordered immutable audit history | None |
+| `GET /api/claims/:claimId/audit` | Ordered immutable audit history with config-defined labels | None |
 | `PUT /api/claims/:claimId/documents` | Set required document metadata | `document_clerk` in `SUBMITTED` |
 | `PUT /api/claims/:claimId/assessor` | Assign the known demo assessor | `team_lead` in `DOCUMENTS_VERIFIED` |
 | `PUT /api/claims/:claimId/assessment-report` | Complete the assigned assessor's report | Assigned `assessor` in `UNDER_ASSESSMENT` |
@@ -142,15 +163,25 @@ npm run test:unit
 npm run test:api
 npm run test:integration
 npm run typecheck
+npm run build
 ```
 
 `npm run test:api` and `npm run test:integration` create/migrate `claims_workflow_test`. Cleanup checks `current_database()` and refuses to run outside a database whose name ends with `_test`. The combined integration script runs the database-using files sequentially so their guarded cleanup cannot interfere.
 
 Current verified coverage includes 29 workflow unit tests, 11 API/PostgreSQL tests, and 9 persistence/PostgreSQL tests. See [evidence](evidence/README.md) for the recorded commands and results.
 
+The browser flow uses the dedicated `_test` database and refuses to prepare data anywhere else. Install the matching browser once, ensure PostgreSQL is running, then run:
+
+```powershell
+npx playwright install chromium
+npm run db:test:setup
+npm run test:ui:e2e
+```
+
+Playwright starts an isolated API on port `3100` and the UI on port `4273`, so it can run while the normal local UI remains open on `4173`. It verifies a blocked document transition, completes a successful document transition, confirms the refreshed audit entry, and captures the checked desktop/mobile evidence.
+
 ## Remaining scope
 
-- React UI and UI verification.
 - Dedicated end-to-end evidence for all five named challenge scenarios.
 - Config-only `MANUAL_REVIEW` extension demonstration.
 - Final scenario/audit/config-diff evidence and submission polish.

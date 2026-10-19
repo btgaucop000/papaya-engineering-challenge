@@ -15,3 +15,11 @@ The working tree was dirty for every run because the workflow-persistence implem
 The API implementation was verified on the uncommitted `feat/claims-api` worktree based on `5c638ee`. The evidence includes Git preparation, final unit/integration/typecheck results, idempotent demo seeding, and a real API entrypoint smoke test.
 
 - [2026-10-19-claims-api.md](2026-10-19-claims-api.md)
+
+## Claims UI increment
+
+The React UI was verified on the uncommitted `feat/claims-ui` worktree based on `origin/main` at `4a2c155`. The evidence records the final checks, guarded browser fixture, successful/blocked Playwright flow, and real desktop/mobile screenshots.
+
+- [2026-10-20-claims-ui.md](2026-10-20-claims-ui.md)
+- [Desktop screenshot](claims-ui-desktop.png)
+- [Mobile screenshot](claims-ui-mobile.png)
