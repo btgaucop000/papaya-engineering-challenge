@@ -1,0 +1,255 @@
+{
+  "id": "claims-workflow",
+  "version": 1,
+  "settings": {
+    "appealPeriodDays": 14
+  },
+  "roles": [
+    "document_clerk",
+    "team_lead",
+    "assessor",
+    "finance",
+    "system"
+  ],
+  "states": [
+    { "id": "SUBMITTED", "label": "Submitted" },
+    { "id": "DOCUMENTS_VERIFIED", "label": "Documents Verified" },
+    { "id": "UNDER_ASSESSMENT", "label": "Under Assessment" },
+    { "id": "PENDING_INFO", "label": "Pending Information" },
+    { "id": "APPROVED", "label": "Approved" },
+    { "id": "REJECTED", "label": "Rejected" },
+    { "id": "PAYMENT_INITIATED", "label": "Payment Initiated" },
+    { "id": "CLOSED", "label": "Closed" }
+  ],
+  "transitions": [
+    {
+      "id": "verify_documents",
+      "from": "SUBMITTED",
+      "to": "DOCUMENTS_VERIFIED",
+      "roles": ["document_clerk"],
+      "precondition": {
+        "fact": "documents.allRequiredPresentValid",
+        "operator": "eq",
+        "value": true,
+        "description": "All required documents must be present and valid"
+      },
+      "effects": [
+        {
+          "type": "notify_assessor_team",
+          "phase": "afterCommit",
+          "args": { "template": "documents_verified" }
+        }
+      ]
+    },
+    {
+      "id": "start_assessment",
+      "from": "DOCUMENTS_VERIFIED",
+      "to": "UNDER_ASSESSMENT",
+      "roles": ["team_lead"],
+      "precondition": {
+        "fact": "assessment.assessorAssigned",
+        "operator": "eq",
+        "value": true,
+        "description": "An assessor must be assigned"
+      },
+      "effects": [
+        {
+          "type": "start_assessment_timer",
+          "phase": "transactional",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "approve_claim",
+      "from": "UNDER_ASSESSMENT",
+      "to": "APPROVED",
+      "roles": ["assessor"],
+      "precondition": {
+        "all": [
+          {
+            "fact": "assessment.reportComplete",
+            "operator": "eq",
+            "value": true,
+            "description": "The assessment report must be complete"
+          },
+          {
+            "fact": "claim.amount",
+            "operator": "lte",
+            "valueFromFact": "policy.limit",
+            "description": "The claim amount must not exceed the policy limit"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "type": "create_payment_request",
+          "phase": "transactional",
+          "args": {}
+        },
+        {
+          "type": "notify_member",
+          "phase": "afterCommit",
+          "args": { "template": "claim_approved" }
+        }
+      ]
+    },
+    {
+      "id": "reject_claim",
+      "from": "UNDER_ASSESSMENT",
+      "to": "REJECTED",
+      "roles": ["assessor"],
+      "precondition": {
+        "all": [
+          {
+            "fact": "assessment.reportComplete",
+            "operator": "eq",
+            "value": true,
+            "description": "The assessment report must be complete"
+          },
+          {
+            "fact": "command.rejectionReason",
+            "operator": "exists",
+            "description": "A rejection reason must be provided"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "type": "notify_member",
+          "phase": "afterCommit",
+          "args": {
+            "template": "claim_rejected",
+            "include": ["rejection_reason", "appeal_instructions"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "request_more_info",
+      "from": "UNDER_ASSESSMENT",
+      "to": "PENDING_INFO",
+      "roles": ["assessor"],
+      "precondition": {
+        "fact": "command.missingInfoDescription",
+        "operator": "exists",
+        "description": "A missing-information description must be provided"
+      },
+      "effects": [
+        {
+          "type": "notify_member",
+          "phase": "afterCommit",
+          "args": { "template": "additional_information_requested" }
+        }
+      ]
+    },
+    {
+      "id": "receive_additional_info",
+      "from": "PENDING_INFO",
+      "to": "DOCUMENTS_VERIFIED",
+      "roles": ["document_clerk"],
+      "precondition": {
+        "fact": "information.currentRequestHasValidRecord",
+        "operator": "eq",
+        "value": true,
+        "description": "Valid information must be recorded for the current request sequence"
+      },
+      "effects": [
+        {
+          "type": "reset_assessment_timer",
+          "phase": "transactional",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "initiate_payment",
+      "from": "APPROVED",
+      "to": "PAYMENT_INITIATED",
+      "roles": ["finance"],
+      "precondition": {
+        "fact": "payment.requestExists",
+        "operator": "eq",
+        "value": true,
+        "description": "A payment request must exist"
+      },
+      "effects": [
+        {
+          "type": "mark_payment_initiated",
+          "phase": "transactional",
+          "args": {}
+        },
+        {
+          "type": "invoke_payment_system",
+          "phase": "afterCommit",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "close_paid_claim",
+      "from": "PAYMENT_INITIATED",
+      "to": "CLOSED",
+      "roles": ["finance"],
+      "precondition": {
+        "all": [
+          {
+            "fact": "payment.confirmed",
+            "operator": "eq",
+            "value": true,
+            "description": "Payment must be confirmed"
+          },
+          {
+            "fact": "payment.reference",
+            "operator": "exists",
+            "description": "A payment reference must be provided"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "type": "notify_member",
+          "phase": "afterCommit",
+          "args": { "template": "payment_confirmed", "include": ["payment_reference"] }
+        }
+      ]
+    },
+    {
+      "id": "close_rejected_claim",
+      "from": "REJECTED",
+      "to": "CLOSED",
+      "roles": ["system"],
+      "precondition": {
+        "any": [
+          {
+            "fact": "appeal.expired",
+            "operator": "eq",
+            "value": true,
+            "description": "The appeal period must have expired"
+          },
+          {
+            "fact": "rejection.memberAcknowledged",
+            "operator": "eq",
+            "value": true,
+            "description": "The member must have acknowledged the rejection"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "type": "archive_claim",
+          "phase": "transactional",
+          "args": {}
+        }
+      ]
+    }
+  ],
+  "cycleLimits": [
+    {
+      "transitionId": "request_more_info",
+      "counterFact": "workflow.informationRequestCount",
+      "max": 3,
+      "errorMessage": "Maximum information requests exceeded — escalate to team lead"
+    }
+  ]
+}

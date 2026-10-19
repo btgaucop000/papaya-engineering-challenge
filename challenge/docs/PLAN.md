@@ -2,7 +2,34 @@
 
 ## Current status
 
-This document is a plan only. No application code or infrastructure has been implemented, and none of the planned tests or scenarios has been run yet.
+As of 2026-10-19, the validated workflow configuration and pure TypeScript workflow-engine increments are implemented. The database, API, React UI, effect handlers, and delivery pipeline have not been implemented.
+
+The implemented slice has been verified with the following commands:
+
+- `npm test`: 29 unit tests passed, 0 failed.
+- `npm run typecheck`: passed.
+
+The five end-to-end scenarios and all persistence, transaction, audit, concurrency, API, UI, and config-extension checks remain pending because their implementation increments are not part of the current slice.
+
+## Implementation progress
+
+### Completed in the workflow-engine slice
+
+- Added the minimal TypeScript project structure, build/test/typecheck scripts, and development dependencies.
+- Added the complete eight-state, nine-transition claims workflow JSON with roles, preconditions, cycle limit, demo appeal duration, and effect descriptors.
+- Added startup validation for duplicate identifiers; state, transition, role, fact, operator, and effect references; effect phase ownership; condition operands; and positive cycle limits.
+- Added a framework-independent engine that lists outgoing transitions and returns a `TransitionPlan` after transition, role, cycle-limit, and precondition checks.
+- Added specific domain errors for invalid transitions, unauthorized roles, failed preconditions, missing facts, and exceeded cycle limits.
+- Kept the engine free of database, HTTP, framework, and effect-execution dependencies.
+- Added unit coverage for amount below/equal to/above the policy limit, missing facts in `all` and `any`, the fourth information request, config validation, effect planning, and input immutability.
+
+### Remaining increments
+
+- PostgreSQL schema, repositories, locking, atomic persistence, and audit immutability.
+- NestJS API, server-controlled demo identities, prerequisite operations, and effect handlers.
+- React UI and all UI verification.
+- Required end-to-end scenarios, transaction/concurrency tests, database permission checks, and config-only extension demonstration.
+- Final setup, scenario, audit, and extension evidence in the challenge README.
 
 ## Purpose and labels
 
